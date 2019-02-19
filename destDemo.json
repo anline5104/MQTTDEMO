@@ -1,0 +1,24 @@
+[
+    {
+      "dest": "inspect.huayuan-iot.com",
+      "topics": [
+        {
+          "src": "cloud.huayuan-iot.com",
+          "topic": "sample-values/9H200A1700008/#"
+        },
+        {
+          "src": "icloud.huayuan-iot.com",
+          "topic": "sample-values/9H200A1700023/#"
+        }
+      ]
+    },
+    {
+      "dest": "lab.huayuan-iot.com",
+      "topics": [
+        {
+          "src": "cloud.huayuan-iot.com",
+          "topic": "sample-values/9H200A1700008/#"
+        }
+      ]
+    }
+  ]
