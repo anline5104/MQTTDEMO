@@ -2,11 +2,10 @@ package main
 
 import (
 	"demo/mqtt"
+	"demo/tools"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
-	"time"
 )
 
 type SrcTopic struct {
@@ -19,9 +18,9 @@ type ServersDemo struct {
 	Topics        []SrcTopic
 }
 
-
-
-
+//对应队列
+var descToTopic []map[string](map[string]bool)   //唯一的desc 对应topic
+var srcToTopic  []map[string](map[string]bool)   //唯一的src  对应topic
 
 func main() {
 	filePtr, err := os.Open("destDemo.json")
@@ -55,48 +54,91 @@ func main() {
 		}
 	}
 
+	//添加进对应desc队列
+	for k,_ := range distinctDestMap{
+		for i:=0;i< len(serversDemos);i++{
+			destbroker := "tcp://" + serversDemos[i].Dest
+			if k == destbroker {
+				for j:=0;j< len(serversDemos[i].Topics);j++{
+					descTopic :=  serversDemos[i].Topics[j].Topic
+
+					descTo := make(map[string]map[string]bool)
+					topic := make(map[string]bool)
+					topic[descTopic] = true
+
+					descTo[k] = topic
+					descToTopic = append(descToTopic,descTo)
+				}
+			}
+		}
+	}
+
+	//添加进对应的src队列
+	for k,_ := range distinctSrcMap{
+		for i:=0;i< len(serversDemos);i++{
+				for j:=0;j< len(serversDemos[i].Topics);j++{
+					srcbroker :=  "tcp://" + serversDemos[i].Topics[j].Src
+					if k == srcbroker{
+						srcTopic :=  serversDemos[i].Topics[j].Topic
+
+						srcTo := make(map[string]map[string]bool)
+						topic := make(map[string]bool)
+						topic[srcTopic] = true
+						srcTo[k] = topic
+						srcToTopic = append(srcToTopic,srcTo)
+					}
+				}
+			}
+		}
+
+	//数组去重处理后的队列
+	descToTopicNoRep := tools.RemoveRepByLoop(descToTopic)  //map[tcp://inspect.huayuan-iot.com:map[sample-values/9H200A1700023/#:true]]
+	srcToTopicNoRep := tools.RemoveRepByLoop(srcToTopic)
+
+
 	//分类client
 	destClientMap := make(map[string]mqtt.MQTTClient)
 	srcClientMap  := make(map[string]mqtt.MQTTClient)
 
 
+	//发布
 	for k,_ := range distinctDestMap{
 		destClientMap[k] = mqtt.DestInit(k)
-	}
-
-	for k,_ := range distinctSrcMap{
-		srcClientMap[k] = mqtt.SrcInit(k)
-	}
-
-
-
-	//遍历
-	for _,server := range serversDemos{
-		fmt.Println(server.Dest)
-		destbroker :=  "tcp://" + server.Dest
-		destcli := mqtt.DestInit(destbroker)
+		destcli := destClientMap[k]
 		go destcli.Connect()
-	/*	<-destcli.Connected
-		destcli.Hasconnected = true*/
 
-		for _,topic := range server.Topics{
-			srcbroker :=  "tcp://" + topic.Src
-			srccli  :=  mqtt.SrcInit(srcbroker,destcli)
-
-			go srccli.Connect()
-
-			<-srccli.Connected
-
-			if token := srccli.Client.Subscribe(topic.Topic, 0, nil); token.Wait() && token.Error() != nil {
-				log.Printf("subscribe topic [%v] fail, exit!\n", topic)
-				os.Exit(1)
-			}
-
-			for {
-				time.Sleep(time.Second)
+		for _,v := range descToTopicNoRep{
+			for key,value := range v{
+				if key == k {
+					for keyTopic,_ := range value{
+						go func(M mqtt.MQTTClient,s string) {
+							<-destcli.Connected
+							destcli.PublishSampleValues(keyTopic,"helloWorld")
+						}(destcli,keyTopic)
+					}
+				}
 			}
 		}
+	}
 
+	//订阅
+	for k,_ := range distinctSrcMap{
+		srcClientMap[k] = mqtt.SrcInit(k)
+		srccli  :=  srcClientMap[k]
+		go srccli.Connect()
+
+		for _,v := range srcToTopicNoRep{
+			for key,value := range v{
+				if key == k {
+					for keyTopic,_ := range value{
+						go func(M mqtt.MQTTClient,s string) {
+							<-srccli.Connected
+							srccli.Subscribe(keyTopic)
+						}(srccli,keyTopic)
+					}
+				}
+			}
+		}
 	}
 
 }

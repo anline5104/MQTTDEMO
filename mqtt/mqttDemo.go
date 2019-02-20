@@ -1,4 +1,5 @@
 package mqtt
+
 import (
 	"fmt"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
@@ -44,7 +45,7 @@ func DestInit(destbroker string) MQTTClient{
 	return destcli
 }
 
-func SrcInit(srcbroker string,destcli MQTTClient) MQTTClient{
+func SrcInit(srcbroker string) MQTTClient{
 	srcopts := MQTT.NewClientOptions()
 	srcopts.AddBroker(srcbroker)
 	srcopts.SetClientID("ShareSourceClientID"+ time.Now().String())
@@ -60,7 +61,9 @@ func SrcInit(srcbroker string,destcli MQTTClient) MQTTClient{
 
 	srcopts.SetDefaultPublishHandler(f)
 	// share message
-	srcopts.SetDefaultPublishHandler(func(client MQTT.Client, msg MQTT.Message) {
+
+
+	/*srcopts.SetDefaultPublishHandler(func(client MQTT.Client, msg MQTT.Message) {
 		// public message
 		if destcli.Hasconnected == true {
 			// log.Printf("public message: %v, %s", msg.Topic(), msg.Payload())
@@ -68,7 +71,7 @@ func SrcInit(srcbroker string,destcli MQTTClient) MQTTClient{
 			token := destcli.Client.Publish(msg.Topic(), 0, true, msg.Payload())
 			token.Wait()
 		}
-	})
+	})*/
 
 	srcsrv := MQTT.NewClient(srcopts)
 	var srccli MQTTClient
@@ -100,4 +103,28 @@ RetryLoop:
 	c.Connected <- true
 
 	return nil
+}
+
+//发布
+func (c *MQTTClient) PublishSampleValues(topic, payload string) error {
+	if c.Client == nil {
+		return fmt.Errorf("mqtt client unavailable")
+	}
+
+	token := c.Client.Publish(topic, 0, true, payload)
+	token.Wait()
+
+	return token.Error()
+}
+
+//订阅
+func (c *MQTTClient) Subscribe(topic string) error {
+	if c.Client == nil {
+		return fmt.Errorf("mqtt client unavailable")
+	}
+
+	token := c.Client.Subscribe(topic, 0, nil)
+	token.Wait()
+
+	return token.Error()
 }
