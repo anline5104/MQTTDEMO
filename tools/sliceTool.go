@@ -1,5 +1,7 @@
 package tools
 
+import "strings"
+
 //数组去重
 func RemoveRepByLoop(slc []map[string](map[string]bool) )  []map[string](map[string]bool)  {
 	result := []map[string](map[string]bool){}   // 存放结果
@@ -41,4 +43,12 @@ func equelBool(x,y map[string]bool) bool{
 		}
 	}
 	return true
+}
+
+//sample-values/9H200A1700008/#
+//sample-values/9H200A1700008/
+func CutOutString(s string)string{
+	cutIndex := strings.Index(s, "#")
+	s = string([]rune(s)[:cutIndex])
+	return s
 }

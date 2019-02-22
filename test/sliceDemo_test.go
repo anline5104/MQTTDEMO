@@ -1,8 +1,7 @@
 package test
 
 import (
-	"demo/tools"
-	"encoding/json"
+		"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -21,8 +20,8 @@ func  TestSlice(t *testing.T){
 	}
 
 	//对应队列
-	var descToTopic []map[string](map[string]bool)   //唯一的desc 对应topic
-	var srcToTopic  []map[string](map[string]bool)   //唯一的src  对应topic
+	var destToTopic map[string](map[string]bool)   //唯一的dest 对应topic
+	var srcToTopic  map[string](map[string]bool)   //唯一的src  对应topic
 
 	filePtr, err := os.Open("../destDemo.json")
 	if err != nil {
@@ -69,37 +68,35 @@ func  TestSlice(t *testing.T){
 	fmt.Println("+++++ 显示去重后的URL+++++")
 
 	//添加进对应desc队列
+	destTopic := make(map[string]bool) //dest的topic map
+	destToTopic = make(map[string](map[string]bool))
+
 	for k,_ := range distinctDestMap{
 		for i:=0;i< len(serversDemos);i++{
 			destbroker := "tcp://" + serversDemos[i].Dest
 			if k == destbroker {
 				for j:=0;j< len(serversDemos[i].Topics);j++{
-					descTopic :=  serversDemos[i].Topics[j].Topic
-
-					descTo := make(map[string]map[string]bool)
-					topic := make(map[string]bool)
-					topic[descTopic] = true
-
-					descTo[k] = topic
-					descToTopic = append(descToTopic,descTo)
+					 //dest的topic map
+					 destTopicSingle := serversDemos[i].Topics[j].Topic
+					 destTopic[destTopicSingle] = true
 				}
+				destToTopic[k] = destTopic
 			}
 		}
 	}
 
 	//添加进对应的src队列
+	srcToTopic = make(map[string](map[string]bool))
 	for k,_ := range distinctSrcMap{
 		for i:=0;i< len(serversDemos);i++{
 			for j:=0;j< len(serversDemos[i].Topics);j++{
 				srcbroker :=  "tcp://" + serversDemos[i].Topics[j].Src
+				srcTopicSingele := serversDemos[i].Topics[j].Topic
 				if k == srcbroker{
-					srcTopic :=  serversDemos[i].Topics[j].Topic
-
-					srcTo := make(map[string]map[string]bool)
-					topic := make(map[string]bool)
-					topic[srcTopic] = true
-					srcTo[k] = topic
-					srcToTopic = append(srcToTopic,srcTo)
+					srcTopic := make(map[string]bool)
+					srcTopic[srcTopicSingele] = true
+					srcToTopic[k] = srcTopic
+					//srcToTopic = append(srcToTopic,srcTo)
 				}
 			}
 		}
@@ -108,18 +105,18 @@ func  TestSlice(t *testing.T){
 
 
 
-	for _,v :=range descToTopic{
-		fmt.Println(v)
+	for k,v :=range destToTopic{
+		fmt.Println(k,v)
 	}
 
 	fmt.Println("------------------")
 
 	//未去重
-	for _,v :=range srcToTopic{
-		fmt.Println(v)
+	for k,v :=range srcToTopic{
+		fmt.Println(k,v)
 	}
 
-	fmt.Println("++++ 数组去重 ++++")
+	/*fmt.Println("++++ 数组去重 ++++")
 
 	for _,v :=range tools.RemoveRepByLoop(descToTopic){
 		fmt.Println(v)
@@ -129,6 +126,6 @@ func  TestSlice(t *testing.T){
 	for _,v :=range tools.RemoveRepByLoop(srcToTopic){
 		fmt.Println(v)
 	}
-
+*/
 
 }

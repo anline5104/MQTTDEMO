@@ -1,7 +1,6 @@
 package mqtt
 
 import (
-	"fmt"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"log"
 	"time"
@@ -14,10 +13,9 @@ type MQTTClient struct {
 	Hasconnected bool
 }
 
-var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
-	fmt.Printf("TOPIC: %sn", msg.Topic())
-	fmt.Printf("MSG: %sn", msg.Payload())
-}
+//消息队列
+var MsgQueue []MQTT.Message
+var MsgChan = make(chan bool)
 
 //init dest
 func DestInit(destbroker string) MQTTClient{
@@ -25,7 +23,7 @@ func DestInit(destbroker string) MQTTClient{
 	destopts.AddBroker(destbroker)
 	destopts.SetClientID("ShareDestinationClientID" + time.Now().String())
 	destopts.SetCleanSession(false)
-	destopts.SetStore(MQTT.NewFileStore(":memory:"))
+	destopts.SetStore(MQTT.NewFileStore("memory"))
 	destopts.SetAutoReconnect(true)
 	destopts.SetOnConnectHandler(func(client MQTT.Client) {
 		log.Printf("destination service [%v] has connected\n", destbroker)
@@ -42,15 +40,18 @@ func DestInit(destbroker string) MQTTClient{
 	destcli.Connected = make(chan bool)
 	destcli.Hasconnected = false
 
+	log.Println(destcli)
+
 	return destcli
 }
 
+//init src
 func SrcInit(srcbroker string) MQTTClient{
 	srcopts := MQTT.NewClientOptions()
 	srcopts.AddBroker(srcbroker)
 	srcopts.SetClientID("ShareSourceClientID"+ time.Now().String())
 	srcopts.SetCleanSession(false)
-	srcopts.SetStore(MQTT.NewFileStore(":memory:"))
+	srcopts.SetStore(MQTT.NewFileStore("memory"))
 	srcopts.SetAutoReconnect(true)
 	srcopts.SetOnConnectHandler(func(client MQTT.Client) {
 		log.Printf("source service [%v] has connected\n", srcbroker)
@@ -59,7 +60,11 @@ func SrcInit(srcbroker string) MQTTClient{
 		log.Printf("source service [%v] disconnected\n", srcbroker)
 	})
 
-	srcopts.SetDefaultPublishHandler(f)
+	srcopts.SetDefaultPublishHandler(func(client MQTT.Client, msg MQTT.Message) {
+		MsgQueue = append(MsgQueue,msg)
+		MsgChan <- true
+	})
+
 	// share message
 
 
@@ -79,17 +84,22 @@ func SrcInit(srcbroker string) MQTTClient{
 	srccli.Name = srcbroker
 	srccli.Connected = make(chan bool)
 	srccli.Hasconnected = false
+
+	log.Println(srccli)
 	return srccli
 }
 
 
-func (c MQTTClient) Connect() error {
+func (c *MQTTClient) Connect() error {
 	retry := time.NewTicker(5 * time.Second)
 RetryLoop:
 	for {
 		select {
 		case <-retry.C:
-			if token := c.Client.Connect(); token.Wait() && token.Error() != nil {
+			log.Println(c)
+			token := c.Client.Connect()
+			log.Println(token)
+			if token.Wait() && token.Error() != nil {
 				// handle error
 				log.Printf("connect mqtt server [%v] fail\n", c.Name)
 			} else {
@@ -105,26 +115,4 @@ RetryLoop:
 	return nil
 }
 
-//发布
-func (c *MQTTClient) PublishSampleValues(topic, payload string) error {
-	if c.Client == nil {
-		return fmt.Errorf("mqtt client unavailable")
-	}
 
-	token := c.Client.Publish(topic, 0, true, payload)
-	token.Wait()
-
-	return token.Error()
-}
-
-//订阅
-func (c *MQTTClient) Subscribe(topic string) error {
-	if c.Client == nil {
-		return fmt.Errorf("mqtt client unavailable")
-	}
-
-	token := c.Client.Subscribe(topic, 0, nil)
-	token.Wait()
-
-	return token.Error()
-}

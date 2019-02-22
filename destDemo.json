@@ -1,22 +1,22 @@
 [
     {
-      "dest": "inspect.huayuan-iot.com",
+      "dest": "127.0.0.1:1883",
       "topics": [
         {
-          "src": "cloud.huayuan-iot.com",
+          "src": "cloud.huayuan-iot.com:1883",
           "topic": "sample-values/9H200A1700008/#"
         },
         {
-          "src": "icloud.huayuan-iot.com",
+          "src": "icloud.huayuan-iot.com:1883",
           "topic": "sample-values/9H200A1700023/#"
         }
       ]
     },
     {
-      "dest": "lab.huayuan-iot.com",
+      "dest": "127.0.0.1:1883",
       "topics": [
         {
-          "src": "cloud.huayuan-iot.com",
+          "src": "cloud.huayuan-iot.com:1883",
           "topic": "sample-values/9H200A1700008/#"
         }
       ]
